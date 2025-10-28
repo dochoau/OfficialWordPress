@@ -1,0 +1,73 @@
+
+services:
+  wordpress:
+    image: wordpress:6.6.2-php8.3-apache
+    container_name: wordpress
+    depends_on:
+      - mariadb
+      - redis
+    restart: always
+    ports:
+      - "8080:80"                   # Acceso web a WordPress
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_USER: ${MYSQL_USER}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_REDIS_HOST', 'redis');
+        define('WP_REDIS_PORT', 6379);
+        define('WP_REDIS_DISABLED', false);
+    volumes:
+      - ./wordpress_data:/var/www/html
+
+  mariadb:
+    image: mariadb:11.5.2
+    container_name: mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - ./mariadb_data:/var/lib/mysql
+    ports:
+      - "3306:3306"                  # Permite acceso desde DBeaver u otras apps
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: always
+    depends_on:
+      - mariadb
+    environment:
+      PMA_HOST: mariadb
+      PMA_USER: ${MYSQL_USER}
+      PMA_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "8081:80"                    # Acceso vía http://localhost:8081
+
+  redis:
+    image: redis:7.4
+    container_name: redis
+    restart: always
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - ./redis_data:/data
+    ports:
+      - "6379:6379"
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    restart: always
+    ports:
+      - "8025:8025"                  # Interfaz web para ver correos
+      - "1025:1025"                  # Puerto SMTP para WordPress
+
+volumes:
+  wordpress_data:
+  mariadb_data:
+  redis_data:
+
